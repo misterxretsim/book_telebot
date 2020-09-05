@@ -14,7 +14,7 @@ bot.on('text', (ctx) => {
         const username = ctx.update.message.from.username;                                          //@ клиента
         const name = ctx.update.message.from.first_name + ' ' + ctx.update.message.from.last_name;  //имя клиента
         const tg_id = ctx.update.message.from.id;                                                   //телеграм_id клиента
-        const product = giveIDs(ctx.update.message.text, tg_id);                                    //id заказа(ов)
+        const product = giveIDs(ctx.update.message.text);                                           //id заказа(ов)
 
         if (product) {
             db.all(`SELECT id, products FROM Cart WHERE username = '${username}' AND status != 1;`, [], (err, rows) => {
@@ -36,6 +36,11 @@ bot.on('text', (ctx) => {
                     }
                 }
             });
+
+            bot.telegram.sendMessage(tg_id, `Вы только что добавили в заказ: ${product}`);
+
+        } else {
+            bot.telegram.sendMessage(tg_id, `Вы написали некорректное сообщение:\n"${ctx.update.message.text}"\n\nнапишите /rules и сравните с примерами. Писать нужно обязательно в общий чат.`);
         }
 
         db.all(`SELECT id FROM Clients WHERE username = '${username}';`, [], (err, rows) => {
@@ -77,19 +82,11 @@ bot.on('photo', (ctx) => {
     }
 });
 
-
 bot.launch();
 
 const controlTakeProduct = (text, type) => (text.toUpperCase().indexOf('БЕРУ') + 1) && type !== 'private';
 const controlPhoto = (username, id, type) => username === process.env.ADMIN && id === Number(process.env.ADMIN_ID) && type === 'private';
-const giveIDs = (text, tg_id) => {
-    const txt = text.match(/\d+/gm);
-    if (txt) {
-        bot.telegram.sendMessage(tg_id, `Вы только что добавили в заказ: ${txt.reduce((acc, current) => acc + ', ' + current)}`);
-    } else {
-        bot.telegram.sendMessage(tg_id, `Вы написали некорректное сообщение:\n"${text}"\n\nнапишите /rules и сравните с примерами. Писать нужно обязательно в общий чат.`);
-    }
-}
+const giveIDs = (text) => text.match(/\d+/gm) ? text.match(/\d+/gm).reduce((acc, current) => acc + ', ' + current) : false;
 const rules =
     'Правила чата:\n' +
     '\n' +
