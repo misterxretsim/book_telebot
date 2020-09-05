@@ -1,5 +1,6 @@
 const Extra = require('telegraf/extra')
 const Telegraf = require('telegraf');
+const sqlite3 = require('sqlite3').verbose();
 require('dotenv').config();
 
 
@@ -11,12 +12,13 @@ class CustomContext extends Telegraf.Context {
 }
 
 
-const bot = new Telegraf(process.env.BOT_API, { contextType: CustomContext });
 let id = 1000;
+const bot = new Telegraf(process.env.BOT_API, { contextType: CustomContext });
+const db = new sqlite3.Database('telebot');
 
 bot.on('text', (ctx) => {
 
-    if (((ctx.update.message.text.indexOf('беру') + 1) || (ctx.update.message.text.indexOf('Беру') + 1)) && ctx.update.message.chat.type !== 'private') {
+    if ((ctx.update.message.text.toUpperCase().indexOf('БЕРУ') + 1) && ctx.update.message.chat.type !== 'private') {
 
         const id = ctx.update.message.text.substr(-4);                                        //id заказа
         const username = ctx.update.message.from.username;                                          //@ клиента
