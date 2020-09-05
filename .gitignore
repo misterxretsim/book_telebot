@@ -105,6 +105,6 @@ dist
 
 package-lock.json
 .idea/
-/telebot
-
+/telebot.sqlite3
+/telebot.sqlite3-journal
 **/.DS_Store
