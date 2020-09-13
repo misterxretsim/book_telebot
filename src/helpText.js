@@ -21,4 +21,14 @@ const adminRules =
     '/close_buy - команда для завершения последней закупки;\n' +
     '/client @username - команда для получения отчета по клиенту на текущей закупке;';
 
-module.exports = { groupRules, lsRules, adminRules }
+const startRules =
+    'Привет!\n' +
+    '\n' +
+    'Тут ты сможешь видеть информацию о своем заказе.\n' +
+    '\n' +
+    'Полезные команды:\n' +
+    '\n' +
+    '/help - информация по взаимодействию с ботом, в личных сообщениях и беседе разные правила;\n' +
+    '/info - информация о Вашем заказе.';
+
+module.exports = { groupRules, lsRules, adminRules, startRules }

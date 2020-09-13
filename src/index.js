@@ -2,11 +2,21 @@ const Telegraf = require('telegraf');
 const Markup = require('telegraf/markup')
 const sqlite3 = require('sqlite3').verbose();
 const help = require('./helpers')
+const helpText = require('./helpText')
 require('dotenv').config();
 
 
 const bot = new Telegraf(process.env.BOT_API);
 
+
+bot.start(ctx => {
+    if (ctx.update.message.chat.type === 'private') {
+        ctx.reply(
+            helpText.startRules,
+            Markup.keyboard([['/info', '/help']]).resize().extra()
+        )
+    }
+});
 
 bot.help(ctx => help.sendHelpText(ctx));
 bot.hears('Правила', ctx => help.sendHelpText(ctx));
@@ -48,7 +58,22 @@ bot.command('info', (ctx) => {
     }
 });
 
-bot.on('text', (ctx) => {
+bot.command('close_buy', ctx => {
+
+    if ( help.controlPhoto(ctx.update.message.from.username, ctx.update.message.from.id, ctx.update.message.chat.type) ) {
+        const db = new sqlite3.Database('telebot.sqlite3');
+        db.run('UPDATE Cart SET status = 1 WHERE status = 0;', (err) => {
+            if (err) {
+                return console.log('Cart', err.message);
+            } else {
+                ctx.reply('Закупка успешно закрыта 😉');
+            }
+        });
+        db.close();
+    }
+})
+
+bot.on('text', ctx => {
 
     const text = ctx.update.message.text;
 
@@ -125,7 +150,7 @@ bot.on('text', (ctx) => {
     }
 });
 
-bot.on('photo', (ctx) => {
+bot.on('photo', ctx => {
 
     if ( help.controlPhoto(ctx.update.message.from.username, ctx.update.message.from.id, ctx.update.message.chat.type) ) {
 
@@ -156,7 +181,7 @@ bot.on('photo', (ctx) => {
     }
 });
 
-bot.on('callback_query', (ctx) => {
+bot.on('callback_query', ctx => {
     const id = ctx.callbackQuery.data;
     ctx.answerCbQuery(`Была добавлена кнопка заказа: "Беру ${id}"`);
     ctx.reply(`@${ctx.update.callback_query.from.username}, для подтверждения заказа нажмите на "Беру ${id}" в своей клавиатуре`,
