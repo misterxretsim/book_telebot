@@ -1,12 +1,16 @@
 const Telegraf = require('telegraf');
 const Markup = require('telegraf/markup')
 const sqlite3 = require('sqlite3').verbose();
+// const Scene = require('./scenes')
 const help = require('./helpers')
 const helpText = require('./helpText')
 require('dotenv').config();
 
 
 const bot = new Telegraf(process.env.BOT_API);
+
+
+let flagForBuy = 1;
 
 bot.start(ctx => {
 
@@ -59,9 +63,9 @@ bot.command('info', (ctx) => {
     }
 });
 
-bot.command('close', ctx => {
+bot.command('new', ctx => {
 
-    if ( help.isAdmin(ctx.update.message.from.username, ctx.update.message.from.id, ctx.update.message.chat.type) ) {
+    if ( help.isAdmin(ctx) ) {
 
         const db = new sqlite3.Database('telebot.sqlite3');
         db.run('UPDATE Cart SET status = 1 WHERE status = 0;', (err) => {
@@ -69,16 +73,33 @@ bot.command('close', ctx => {
                 ctx.reply('Произошла какая-то ошибка 😣');
                 return console.log('Cart', err.message);
             } else {
-                ctx.reply('Закупка успешно закрыта 😉');
+                ctx.reply('Вы успешно стартовали новую закупку 😉');
             }
         });
         db.close();
     }
 });
 
+bot.command('close_buy', ctx => {
+
+    if (help.isAdmin(ctx)) {
+
+        flagForBuy = 0;
+        ctx.reply('Добавление товаров в заказ ОСТАНОВЛЕНО')
+    }
+});
+bot.command('open_buy', ctx => {
+
+    if (help.isAdmin(ctx)) {
+
+        flagForBuy = 1;
+        ctx.reply('Добавление товаров в заказ ЗАПУЩЕНО')
+    }
+});
+
 bot.command('clients', ctx => {
 
-    if ( help.isAdmin(ctx.update.message.from.username, ctx.update.message.from.id, ctx.update.message.chat.type) ) {
+    if ( help.isAdmin(ctx) ) {
 
         const db1 = new sqlite3.Database('telebot.sqlite3');
         let clients = [];
@@ -118,58 +139,58 @@ bot.command('clients', ctx => {
     }
 });
 
-bot.command('client', ctx => {
-
-    if ( help.isAdmin(ctx.update.message.from.username, ctx.update.message.from.id, ctx.update.message.chat.type) ) {
-
-        let products = [];
-        let client = {};
-        const db = new sqlite3.Database('telebot.sqlite3');
-        db.all(`SELECT name, username, products FROM Cart WHERE status = 0 AND username = '${ctx.update.message.text.match(/@(.*)$/m)[1]}';`, [], (err, rows) => {
-            if (err) {
-                throw err;
-            } else if (rows.length) {
-
-                client.name = rows[0].name;
-                client.username = rows[0].username;
-                client.productArr = rows[0].products.match(/\d+/gm);
-
-                client.productArr.forEach((el) => {
-                    db.all(`SELECT data, coast FROM Product WHERE id = '${el}';`, [], (err, rows) => {
-                        if (err) {
-                            throw err;
-                        } else {
-                            products.push({data: rows[0].data, coast: rows[0].coast, id: el});
-                        }
-                    });
-                });
-            }
-        });
-        db.close();
-
-        setTimeout(() => {
-            products.forEach(el => {
-                bot.telegram.sendPhoto(ctx.update.message.from.id, el.data, {caption: `id: ${el.id}  Цена: ${el.coast}₽`});
-            });
-        }, 100);
-        setTimeout(() => {
-            const sum = products.reduce((acc, current) => acc + Number(current.coast), 0);
-            ctx.reply(
-                `Электронный чек для ${client.name}(@${client.username})\n\nВсего товаров(${products.length}):\n\n${products.reduce((acc, cur) => acc + ` • id: ${cur.id}, цена: ${cur.coast}₽\n`,'')}\n\nИтого к оплате: ${sum}₽`
-            );
-        }, 500);
-    }
-});
+// bot.command('client', ctx => {
+//
+//     if ( help.isAdmin(ctx) ) {
+//
+//         let products = [];
+//         let client = {};
+//         const db = new sqlite3.Database('telebot.sqlite3');
+//         db.all(`SELECT name, username, products FROM Cart WHERE status = 0 AND username = '${ctx.update.message.text.match(/@(.*)$/m)[1]}';`, [], (err, rows) => {
+//             if (err) {
+//                 throw err;
+//             } else if (rows.length) {
+//
+//                 client.name = rows[0].name;
+//                 client.username = rows[0].username;
+//                 client.productArr = rows[0].products.match(/\d+/gm);
+//
+//                 client.productArr.forEach((el) => {
+//                     db.all(`SELECT data, coast FROM Product WHERE id = '${el}';`, [], (err, rows) => {
+//                         if (err) {
+//                             throw err;
+//                         } else {
+//                             products.push({data: rows[0].data, coast: rows[0].coast, id: el});
+//                         }
+//                     });
+//                 });
+//             }
+//         });
+//         db.close();
+//
+//         setTimeout(() => {
+//             products.forEach(el => {
+//                 bot.telegram.sendPhoto(ctx.update.message.from.id, el.data, {caption: `id: ${el.id}  Цена: ${el.coast}₽`});
+//             });
+//         }, 100);
+//         setTimeout(() => {
+//             const sum = products.reduce((acc, current) => acc + Number(current.coast), 0);
+//             ctx.reply(
+//                 `Электронный чек для ${client.name}(@${client.username})\n\nВсего товаров(${products.length}):\n\n${products.reduce((acc, cur) => acc + ` • id: ${cur.id}, цена: ${cur.coast}₽\n`,'')}\n\nИтого к оплате: ${sum}₽`
+//             );
+//         }, 500);
+//     }
+// });
 
 bot.command('coast', ctx => {
 
-     if (help.isAdmin(ctx.update.message.from.username, ctx.update.message.from.id, ctx.update.message.chat.type)) {
+     if (help.isAdmin(ctx)) {
 
          const coast = ctx.update.message.text.match(/\d+/gm)[0];
          const db = new sqlite3.Database('telebot.sqlite3');
          db.all(`SELECT id, data FROM Product WHERE coast = 'NEED_COAST';`, [], (err, rows) => {
              if (err) {
-                 ctx.reply(`Произошла неизвсетная ошибка при вызове БД: ${err}`)
+                 ctx.reply(`Произошла неизвсетная ошибка при вызове БД: ${err}`);
              } else if (rows.length) {
 
                 rows.forEach( el => {
@@ -177,17 +198,21 @@ bot.command('coast', ctx => {
                     db.run(`UPDATE Product SET coast = '${coast}' WHERE id = ${el.id};`, (err) => {
 
                         if (err) {
-                            ctx.reply(`Произошла неизвсетная ошибка при вызове БД для продукта(id:${el.id}): ${err}`)
+                            ctx.reply(`Произошла неизвсетная ошибка при вызове БД: ${err}`);
                         } else {
                             bot.telegram.sendPhoto(process.env.CHAT_ID, el.data, help.getExtra(el.id, coast));
                         }
                     });
                 });
-            } else ctx.reply('Нет фотографий без цены');
+            } else ctx.reply('На данный момент нет фотографий без цены 😉');
         });
         db.close();
     }
 });
+
+// bot.command('edit', ctx => {
+
+// });
 
 bot.on('text', ctx => {
 
@@ -195,34 +220,41 @@ bot.on('text', ctx => {
 
     if ( help.controlTakeProduct(text, ctx.update.message.chat.type) ) {
 
-        const username = ctx.update.message.from.username;                                          //@ клиента
-        const name = ctx.update.message.from.first_name + ' ' + ctx.update.message.from.last_name;  //полное имя клиента
-        const tg_id = ctx.update.message.from.id;                                                   //телеграм_id клиента
-        const product = help.getProduct(ctx);                                                       //id заказа(ов)
         const db = new sqlite3.Database('telebot.sqlite3');
+        const username = ctx.update.message.from.username;                                              //@ клиента
+        const tg_id = ctx.update.message.from.id;                                                       //телеграм_id клиента
 
-        if (product) {
-            db.all(`SELECT id, products FROM Cart WHERE username = '${username}' AND status != 1;`, [], (err, rows) => {
-                if (err) {
-                    throw err;
-                } else {
-                    if (rows.length > 0) {
-                        db.run(`UPDATE Cart SET products = '${rows[0].products + ', ' + product}' WHERE id = ${rows[0].id};`, (err) => {
-                            if (err) {
-                                return console.log('Cart', err.message);
-                            }
-                        });
+        if (flagForBuy) {
+
+            const name = ctx.update.message.from.first_name + ' ' + ctx.update.message.from.last_name;  //полное имя клиента
+            const product = help.getProduct(ctx);                                                       //id заказа(ов)
+
+            if (product) {
+                db.all(`SELECT id, products FROM Cart WHERE username = '${username}' AND status != 1;`, [], (err, rows) => {
+                    if (err) {
+                        throw err;
                     } else {
-                        db.run(`INSERT INTO Cart (name, username, products, status) VALUES ('${name}', '${username}', '${product}', 0);`, (err) => {
-                            if (err) {
-                                return console.log('Cart', err.message);
-                            }
-                        });
+                        if (rows.length > 0) {
+                            db.run(`UPDATE Cart SET products = '${rows[0].products + ', ' + product}' WHERE id = ${rows[0].id};`, (err) => {
+                                if (err) {
+                                    return console.log('Cart', err.message);
+                                }
+                            });
+                        } else {
+                            db.run(`INSERT INTO Cart (name, username, products, status) VALUES ('${name}', '${username}', '${product}', 0);`, (err) => {
+                                if (err) {
+                                    return console.log('Cart', err.message);
+                                }
+                            });
+                        }
                     }
-                }
-            });
+                });
 
-            bot.telegram.sendMessage(tg_id, `Вы только что добавили в заказ: ${product}`);
+                bot.telegram.sendMessage(tg_id, `Вы только что добавили в заказ: ${product}`);
+            }
+        } else {
+
+            ctx.reply('К сожалению, на сегодня закупка уже закрыта 🙅🏼‍♀️')
         }
 
         db.all(`SELECT id FROM Clients WHERE username = '${username}';`, [], (err, rows) => {
@@ -242,7 +274,7 @@ bot.on('text', ctx => {
 
 bot.on('photo', ctx => {
 
-    if ( help.isAdmin(ctx.update.message.from.username, ctx.update.message.from.id, ctx.update.message.chat.type) ) {
+    if ( help.isAdmin(ctx) ) {
 
         const photo = ctx.update.message.photo[ctx.update.message.photo.length - 1].file_id;
         const coast = ctx.update.message.caption;
